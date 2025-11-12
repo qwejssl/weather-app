@@ -1,4 +1,3 @@
-/* ===== HEADER / SEARCH ===== */
 .header {
 	display: flex;
 	justify-content: space-between;
@@ -69,7 +68,6 @@
 	background: var(--elev-2);
 }
 
-/* ===== CURRENT + HOURLY (no native scrollbar) ===== */
 .headline {
 	display: flex;
 	justify-content: space-between;
@@ -160,37 +158,39 @@
 	height: 22px;
 }
 
-/* ===== MAP (static image + badge) ===== */
 .map-static {
 	position: relative;
-}
-.map-static img {
 	width: 100%;
-	height: auto;
-	display: block;
+	height: 220px;
 	border-radius: 16px;
-}
-.map-static .badge {
-	position: absolute;
-	left: 16px;
-	top: 16px;
-	background: color-mix(
-		in oklab,
-		var(--text) 8%,
-		#000
-	); /* subtle dark chip in both themes */
-	color: #fff;
-	padding: 10px 12px;
-	border-radius: 14px;
-	border: 1px solid color-mix(in oklab, #fff 12%, transparent);
-}
-.map-static .expand {
-	position: absolute;
-	right: 16px;
-	bottom: 16px;
+	overflow: hidden;
 }
 
-/* ===== OVERVIEW CHART ===== */
+.map-static img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+.map-static .expand {
+	position: absolute;
+	right: 10px;
+	bottom: 10px;
+	width: 28px;
+	height: 28px;
+	border-radius: 10px;
+	border: none;
+	background: rgba(255, 255, 255, 0.9);
+	color: #111;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+
+.map-static .expand:hover {
+	background: #fff;
+}
+
 .chart {
 	border-radius: 16px;
 	background: linear-gradient(180deg, var(--elev), var(--elev-2));
@@ -236,7 +236,6 @@
 	border-color: transparent;
 }
 
-/* ===== FORECAST LIST ===== */
 .title-row {
 	display: flex;
 	align-items: center;
@@ -281,7 +280,6 @@
 	color: var(--muted);
 }
 
-/* ===== TOASTS & FOCUS ===== */
 #toasts {
 	position: fixed;
 	right: 16px;
@@ -308,7 +306,6 @@ button:focus-visible,
 	outline-offset: 2px;
 }
 
-/* HOURS — горизонтальный скролл */
 .hours-scroll {
 	display: grid;
 	grid-auto-flow: column;
@@ -329,7 +326,6 @@ button:focus-visible,
 	scroll-snap-align: start;
 }
 
-/* MAP — центрированный пин */
 .map-static {
 	position: relative;
 }
@@ -354,4 +350,59 @@ button:focus-visible,
 	position: absolute;
 	right: 16px;
 	bottom: 16px;
+}
+
+.hours-scroll {
+	display: grid;
+	grid-auto-flow: column;
+	grid-auto-columns: 120px;
+	gap: 12px;
+	overflow-x: auto;
+	padding-bottom: 4px;
+	scroll-snap-type: x proximity;
+}
+
+.hour {
+	scroll-snap-align: start;
+}
+
+.map-static {
+	position: relative;
+}
+
+.map-static img {
+	width: 100%;
+	height: auto;
+	display: block;
+	border-radius: 16px;
+	object-fit: cover;
+}
+
+.center-pin {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+	pointer-events: none;
+}
+
+.icon-btn.expand {
+	position: absolute;
+	bottom: 10px;
+	right: 10px;
+	background: var(--btn-bg, rgba(255, 255, 255, 0.9));
+	border: none;
+	border-radius: 50%;
+	width: 28px;
+	height: 28px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: background 0.2s ease-in-out;
+}
+
+.icon-btn.expand:hover {
+	background: var(--btn-hover, rgba(255, 255, 255, 1));
 }

@@ -1,7 +1,5 @@
-// src/api/openmeteo.js
 import { fetchJSON } from './http.js'
 
-/* ---------- Geocoding ---------- */
 export async function geocode(q, opts = {}) {
 	if (!q) return []
 	const url = `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
@@ -17,12 +15,11 @@ export async function geocode(q, opts = {}) {
 	}))
 }
 
-/* ---------- Weather ---------- */
-export async function getWeather({
-	lat,
-	lon /* tz не нужен: используем auto */,
-}) {
-	const params = new URLSearchParams({
+const ym = iso => iso.slice(0, 7)
+const avg = a => (a.length ? a.reduce((s, v) => s + v, 0) / a.length : null)
+
+export async function getWeather({ lat, lon }) {
+	const p1 = new URLSearchParams({
 		latitude: String(lat),
 		longitude: String(lon),
 		timezone: 'auto',
@@ -30,12 +27,10 @@ export async function getWeather({
 		windspeed_unit: 'kmh',
 		precipitation_unit: 'mm',
 		current_weather: 'true',
-		past_days: '90', // <= 92 — иначе 400
 		timeformat: 'iso8601',
+		past_days: '3',
 	})
-
-	// Имена полей — строго как в API
-	params.append(
+	p1.append(
 		'hourly',
 		[
 			'temperature_2m',
@@ -45,8 +40,7 @@ export async function getWeather({
 			'weathercode',
 		].join(',')
 	)
-
-	params.append(
+	p1.append(
 		'daily',
 		[
 			'weathercode',
@@ -56,21 +50,43 @@ export async function getWeather({
 			'uv_index_max',
 		].join(',')
 	)
+	const forecastURL = `https://api.open-meteo.com/v1/forecast?${p1.toString()}`
 
-	const url = `https://api.open-meteo.com/v1/forecast?${params.toString()}`
-	const j = await fetchJSON(url)
+	const end = new Date()
+	end.setDate(end.getDate() - 1)
+	const start = new Date(end)
+	start.setFullYear(end.getFullYear() - 1)
+	const sd = start.toISOString().slice(0, 10)
+	const ed = end.toISOString().slice(0, 10)
+	const p2 = new URLSearchParams({
+		latitude: String(lat),
+		longitude: String(lon),
+		timezone: 'auto',
+		timeformat: 'iso8601',
+		start_date: sd,
+		end_date: ed,
+	})
+	p2.append(
+		'hourly',
+		['relativehumidity_2m', 'pressure_msl', 'precipitation'].join(',')
+	)
+	p2.append('daily', ['uv_index_max'].join(','))
+	const archiveURL = `https://archive-api.open-meteo.com/v1/archive?${p2.toString()}`
 
-	/* ---- HOURLY: текущий час → +24 ---- */
-	const Ht = j.hourly?.time || []
+	const [fj, aj] = await Promise.all([
+		fetchJSON(forecastURL),
+		fetchJSON(archiveURL),
+	])
+
+	const Ht = fj.hourly?.time || []
 	const H = {
-		t: j.hourly?.temperature_2m || [],
-		h: j.hourly?.relativehumidity_2m || [],
-		r: j.hourly?.precipitation || [],
-		p: j.hourly?.pressure_msl || [],
-		c: j.hourly?.weathercode || [],
+		t: fj.hourly?.temperature_2m || [],
+		h: fj.hourly?.relativehumidity_2m || [],
+		r: fj.hourly?.precipitation || [],
+		p: fj.hourly?.pressure_msl || [],
+		c: fj.hourly?.weathercode || [],
 	}
-
-	const curIso = j.current_weather?.time
+	const curIso = fj.current_weather?.time
 	let curIdx = Ht.findIndex(t => t === curIso)
 	if (curIdx < 0) curIdx = 0
 
@@ -85,64 +101,73 @@ export async function getWeather({
 			code: H.c[i],
 		}))
 
-	/* ---- CURRENT ---- */
 	const current = {
-		temp: j.current_weather?.temperature ?? null,
-		wind: j.current_weather?.windspeed ?? null,
-		code: j.current_weather?.weathercode ?? null,
+		temp: fj.current_weather?.temperature ?? null,
+		wind: fj.current_weather?.windspeed ?? null,
+		code: fj.current_weather?.weathercode ?? null,
 		humidity: Number.isFinite(H.h[curIdx]) ? H.h[curIdx] : null,
 	}
 
-	/* ---- 7-дневный прогноз: сегодня → +6 ---- */
 	const todayISO = new Date().toISOString().slice(0, 10)
-	const Dt = j.daily?.time || []
+	const Dt = fj.daily?.time || []
 	const dailyAll = Dt.map((d, i) => ({
 		date: d,
-		max: j.daily.temperature_2m_max?.[i],
-		min: j.daily.temperature_2m_min?.[i],
-		code: j.daily.weathercode?.[i],
-		precip: j.daily.precipitation_sum?.[i] ?? 0,
-		uvmax: j.daily.uv_index_max?.[i] ?? 0,
+		max: fj.daily.temperature_2m_max?.[i],
+		min: fj.daily.temperature_2m_min?.[i],
+		code: fj.daily.weathercode?.[i],
+		precip: fj.daily.precipitation_sum?.[i] ?? 0,
+		uvmax: fj.daily.uv_index_max?.[i] ?? 0,
 	}))
 	const daily = dailyAll.filter(d => d.date >= todayISO).slice(0, 7)
 
-	/* ---- Серии по месяцам (12 последних) ---- */
-	const toYM = s => s.slice(0, 7)
-	const bucket = new Map() // key -> {h[], p[], rSum, uvMax}
-
-	Ht.forEach((ts, i) => {
-		const k = toYM(ts)
+	const At = aj.hourly?.time || []
+	const Ah = {
+		h: aj.hourly?.relativehumidity_2m || [],
+		p: aj.hourly?.pressure_msl || [],
+		r: aj.hourly?.precipitation || [],
+	}
+	const bucket = new Map()
+	// hourly
+	for (let i = 0; i < At.length; i++) {
+		const k = ym(At[i])
 		let b = bucket.get(k)
 		if (!b) {
-			b = { h: [], p: [], rSum: 0, uvMax: 0 }
+			b = { H: [], P: [], Rsum: 0, UVmax: 0 }
 			bucket.set(k, b)
 		}
-		if (Number.isFinite(H.h[i])) b.h.push(H.h[i])
-		if (Number.isFinite(H.p[i])) b.p.push(H.p[i])
-		if (Number.isFinite(H.r[i])) b.rSum += H.r[i]
-	})
-
-	// UV берём из daily (максимум по месяцу)
-	dailyAll.forEach(d => {
-		const k = toYM(d.date)
+		const hv = Ah.h[i],
+			pv = Ah.p[i],
+			rv = Ah.r[i]
+		if (Number.isFinite(hv)) b.H.push(hv)
+		if (Number.isFinite(pv)) b.P.push(pv)
+		if (Number.isFinite(rv)) b.Rsum += rv
+	}
+	// uv daily
+	const ADt = aj.daily?.time || []
+	const Auv = aj.daily?.uv_index_max || []
+	for (let i = 0; i < ADt.length; i++) {
+		const k = ym(ADt[i])
 		let b = bucket.get(k)
 		if (!b) {
-			b = { h: [], p: [], rSum: 0, uvMax: 0 }
+			b = { H: [], P: [], Rsum: 0, UVmax: 0 }
 			bucket.set(k, b)
 		}
-		b.uvMax = Math.max(b.uvMax, Number(d.uvmax || 0))
-	})
+		b.UVmax = Math.max(b.UVmax, Number(Auv?.[i] || 0))
+	}
 
 	const months = Array.from(bucket.keys()).sort().slice(-12)
-	const avg = a =>
-		a.length ? Math.round(a.reduce((s, v) => s + v, 0) / a.length) : null
-
 	const series = {
 		months,
-		humidity: months.map(k => avg(bucket.get(k).h)),
-		pressure: months.map(k => avg(bucket.get(k).p)),
-		rain: months.map(k => Math.round(bucket.get(k).rSum)),
-		uv: months.map(k => Math.round(bucket.get(k).uvMax)),
+		humidity: months.map(k => {
+			const v = avg(bucket.get(k).H)
+			return v == null ? null : Math.round(v)
+		}),
+		pressure: months.map(k => {
+			const v = avg(bucket.get(k).P)
+			return v == null ? null : Math.round(v)
+		}),
+		rain: months.map(k => Math.round(bucket.get(k).Rsum)),
+		uv: months.map(k => Math.round(bucket.get(k).UVmax)),
 	}
 
 	return {
@@ -153,6 +178,3 @@ export async function getWeather({
 		fetchedAt: new Date().toISOString(),
 	}
 }
-
-
-ksdhfkalsjfkasjfklasjfklasj;kfl

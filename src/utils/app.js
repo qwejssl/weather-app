@@ -8,7 +8,6 @@ import { Tabs } from '../components/Tabs.js'
 import { Toast } from '../components/Toast.js'
 import { setState, subscribe } from '../store/store.js'
 
-// your file is named storege.js right now
 import { getJSON, setJSON } from './storege.js'
 
 const root = document.getElementById('root')
@@ -30,8 +29,6 @@ Tabs(document.getElementById('overview'))
 OverviewChart(document.getElementById('overview'))
 ForecastList(document.getElementById('forecasts'))
 Toast(document.getElementById('toasts'))
-
-// prefs
 ;(function bootPrefs() {
 	const theme = getJSON('theme', 'dark')
 	const unit = getJSON('unit', 'metric')
@@ -46,8 +43,6 @@ subscribe(
 		setJSON('unit', unit)
 	}
 )
-
-// initial data
 ;(async function init() {
 	const savedLoc = getJSON('lastLocation', null)
 	const loc = savedLoc ?? {

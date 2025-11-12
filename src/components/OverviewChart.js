@@ -50,7 +50,7 @@ export function OverviewChart(root) {
 			svg.innerHTML = `<foreignObject x="0" y="0" width="760" height="260"><div xmlns="http://www.w3.org/1999/xhtml" class="skeleton h260"></div></foreignObject>`
 			return
 		}
-		// гарантируем 12 месяцев — если меньше, дополним пустыми слева
+
 		let months = series.months.slice(-12)
 		let vals = (series[metric] || []).slice(-12)
 		if (months.length < 12) {
@@ -77,7 +77,6 @@ export function OverviewChart(root) {
 		x = i => pad + (i * (w - 2 * pad)) / Math.max(1, n)
 		y = v => h - pad - ((v - yMin) / (yMax - yMin || 1)) * (h - 2 * pad)
 
-		// grid + Y labels
 		for (let i = 0; i <= 4; i++) {
 			const yy = pad + i * ((h - 2 * pad) / 4)
 			const val = Math.round(yMax - i * ((yMax - yMin) / 4))
@@ -94,7 +93,7 @@ export function OverviewChart(root) {
 				}" text-anchor="end" class="chart-tick">${val}</text>`
 			)
 		}
-		// X: Jan..Dec
+
 		months.forEach((m, i) => {
 			const label = new Date(`${m}-01`).toLocaleString('en', { month: 'short' })
 			svg.insertAdjacentHTML(
@@ -105,7 +104,6 @@ export function OverviewChart(root) {
 			)
 		})
 
-		// path (пропускаем null)
 		let d = ''
 		vals.forEach((v, i) => {
 			if (!Number.isFinite(v)) {
@@ -118,7 +116,7 @@ export function OverviewChart(root) {
 			'beforeend',
 			`<path d="${d}" fill="none" stroke="currentColor" stroke-width="2.5"/>`
 		)
-		// точка конца
+
 		for (let i = vals.length - 1; i >= 0; i--) {
 			if (Number.isFinite(vals[i])) {
 				svg.insertAdjacentHTML(
@@ -129,7 +127,6 @@ export function OverviewChart(root) {
 			}
 		}
 
-		// hover
 		svg.onmousemove = e => {
 			const rect = svg.getBoundingClientRect()
 			const idx = Math.max(

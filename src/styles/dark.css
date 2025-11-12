@@ -1,4 +1,3 @@
-/* Dark theme overrides — attach to <html data-theme="dark"> */
 html[data-theme='dark'] {
 	--bg: #0e131a;
 	--elev: #161c25;
@@ -22,21 +21,18 @@ html[data-theme='dark'] {
 	--shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
 }
 
-/* background */
 body {
 	background: radial-gradient(1200px 600px at 30% -20%, #182030, transparent),
 		var(--bg);
 	color: var(--text);
 }
 
-/* card look in dark */
 .card {
 	background: linear-gradient(180deg, var(--elev), var(--elev-2));
 	border: 1px solid var(--soft-border);
 	box-shadow: var(--shadow);
 }
 
-/* inputs / pills / icon buttons automatically pick dark vars */
 .input,
 .pill,
 .icon-btn {
@@ -48,7 +44,6 @@ body {
 	background: transparent;
 }
 
-/* chart grid softer in dark */
 .chart-tick {
 	fill: color-mix(in oklab, var(--text) 45%, transparent);
 }
@@ -56,7 +51,6 @@ body {
 	stroke: color-mix(in oklab, var(--text) 14%, transparent);
 }
 
-/* tabs active in dark */
 .tab.active {
 	background: var(--accent);
 	color: var(--accent-ink);

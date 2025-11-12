@@ -13,7 +13,6 @@ export const fmtDateShort = (d, tz) =>
 	})
 
 export function iconPathFor(code) {
-	// Map Open-Meteo WMO codes -> your svg set
 	if (code === 0) return './public/icons/sun.svg'
 	if ([1, 2, 3].includes(code)) return './public/icons/cloud.svg'
 	if ([45, 48].includes(code)) return './public/icons/cloud.svg'
@@ -24,7 +23,6 @@ export function iconPathFor(code) {
 	return './public/icons/cloud.svg'
 }
 
-// (оставь iconFor, если используешь эмодзи в других местах)
 export function iconFor(code) {
 	return '☁️'
 }
